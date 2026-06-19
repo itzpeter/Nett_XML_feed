@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Generált kimenet (a feedet a CI/cron állítja elő, nem verziózzuk)
+/output/
+/public/
+*.tmp
+*.tmp.*

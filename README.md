@@ -84,13 +84,33 @@ php generate-feed.php --help
 | 2 | Szűrés után 0 termék (régi XML érintetlen) |
 | 3 | XML kiírási hiba |
 
-## VPS telepítés (TODO – a cront a VPS-en kell beállítani)
+## Közzététel / üzemeltetés
 
-A scriptet a kívánt publikus fájlt termelő mappa mellé érdemes tenni, pl. `/var/www/nett-feed/generate-feed.php`,
-a kimenet pedig a webgyökérbe kerül:
+A `nett.hu` egy külső, hosztolt webshop-motoron (Vectory) fut, ezért a fájlt **nem**
+tudjuk a `nett.hu` webgyökerébe tenni. Nem is kell: az Árukeresőnek bármilyen
+nyilvánosan elérhető URL megfelel. Két út áll készen — az **A) ajánlott**, mert ingyenes
+és nem kell hozzá szerver.
 
-- Fájl: `/var/www/html/arukereso-feed-soudal-mapei.xml`
-- URL:  `https://nett.hu/arukereso-feed-soudal-mapei.xml`
+### A) GitHub Actions + GitHub Pages (ajánlott, ingyenes)
 
-Lásd: [TODO.md](TODO.md) a cron beállításához.
-# Nett_XML_feed
+A `.github/workflows/feed.yml` naponta legenerálja a feedet és kiteszi GitHub Pages-re.
+
+Egyszeri beállítás:
+1. Repo feltöltése GitHubra (**publikus repó** → minden ingyenes; privát repónál a Pages-hez Pro kell).
+2. **Settings → Pages → Source: „GitHub Actions"**.
+3. **Actions** fül → „Árukereső Mapei/Soudal feed" → **Run workflow** (kézi teszt).
+4. A feed URL-je:
+   ```
+   https://<felhasznalo>.github.io/<repo>/arukereso-feed-soudal-mapei.xml
+   ```
+5. Ezt az URL-t add meg az Árukereső bolti felületén.
+
+Tudnivalók: a cron UTC szerinti és csúcsidőben késhet pár percet (napi 1 feednél mindegy);
+a GitHub 60 nap repo-inaktivitás után letiltja az ütemezett workflow-t (egy commit/manuális
+indítás újraaktiválja).
+
+### B) Saját Ubuntu VPS + nginx
+
+Ha saját szerveren akarod kiszolgálni (saját (al)domain alatt, pl.
+`https://feed.sajatdomain.hu/arukereso-feed-soudal-mapei.xml`), a teljes lépéssor és a
+cron beállítás a [TODO.md](TODO.md)-ben van.

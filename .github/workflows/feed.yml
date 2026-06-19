@@ -1,0 +1,53 @@
+name: Árukereső Mapei/Soudal feed
+
+# Mikor fusson:
+on:
+  schedule:
+    - cron: '10 3 * * *'   # minden nap 03:10 UTC (= 05:10 nyári / 04:10 téli idő itthon)
+  workflow_dispatch: {}     # kézi indítás is a GitHub felületéről
+
+# A GitHub Pages deploy-hoz szükséges jogosultságok
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Egyszerre csak egy deploy fusson
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo letöltése
+        uses: actions/checkout@v4
+
+      - name: PHP beállítása
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, xmlwriter
+
+      - name: Feed generálása
+        run: |
+          mkdir -p public
+          php generate-feed.php --output=public/arukereso-feed-soudal-mapei.xml
+          echo "Generált fájl mérete:"; ls -lh public/
+
+      - name: Pages artifact feltöltése
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Közzététel GitHub Pages-re
+        id: deployment
+        uses: actions/deploy-pages@v4
