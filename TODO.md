@@ -1,45 +1,49 @@
-# TODO – VPS deploy + cron (NEM lokálisan állítandó be)
+# TODO – saját VPS deploy + cron (alternatíva a GitHub Actions helyett)
 
-Ezeket a VPS-en kell elvégezni, nem a fejlesztői gépen.
+Csak akkor kell, ha saját szerverről akarod kiszolgálni a feedet. Ezeket a VPS-en
+kell elvégezni, nem a fejlesztői gépen. (Az ajánlott út a GitHub Actions — lásd `README.md`.)
 
 ## 1. Fájlok kihelyezése
 
 ```bash
-sudo mkdir -p /var/www/nett-feed
-sudo cp generate-feed.php /var/www/nett-feed/
-# a kimeneti webgyökér általában már létezik: /var/www/html
+sudo mkdir -p /var/www/feed-generator
+sudo cp generate-feed.php /var/www/feed-generator/
+sudo mkdir -p /var/www/feed            # ebbe kerül a publikus XML
 ```
 
 ## 2. Első kézi futtatás (smoke test a VPS-en)
 
+A forrás URL-t környezeti változóból adjuk (ne legyen a parancssorban/processz-listában szem előtt):
+
 ```bash
-/usr/bin/php /var/www/nett-feed/generate-feed.php
-ls -l /var/www/html/arukereso-feed-soudal-mapei.xml
-# Ellenőrzés böngészőből: https://nett.hu/arukereso-feed-soudal-mapei.xml
+export FEED_SOURCE_URL="https://<forrás-feed-url>"
+/usr/bin/php /var/www/feed-generator/generate-feed.php \
+  --output=/var/www/feed/arukereso-feed-soudal-mapei.xml
+ls -l /var/www/feed/arukereso-feed-soudal-mapei.xml
 ```
 
-A scriptnek írási joga kell legyen a `/var/www/html` mappához (a cront futtató
-felhasználó nevében). Ha a webszerver felhasználója `www-data`, célszerű az ő
-nevében futtatni a cront, vagy megfelelő jogosultságot adni.
+Az nginx szolgálja ki a `/var/www/feed` mappát egy saját (al)domainen
+(pl. `https://feed.sajatdomain.hu/...`). A scriptnek írási joga kell legyen a kimeneti
+mappához (a cront futtató felhasználó nevében).
 
 ## 3. Cron – napi 1 futtatás (hajnali 3:10)
 
-`crontab -e` (vagy `/etc/cron.d/nett-feed`):
+A forrás URL-t a cron környezetében add meg (pl. a crontab elején vagy egy külön env-fájlban):
 
 ```cron
-10 3 * * * /usr/bin/php /var/www/nett-feed/generate-feed.php >> /var/log/nett-arukereso-xml-feed.log 2>&1
+FEED_SOURCE_URL=https://<forrás-feed-url>
+10 3 * * * /usr/bin/php /var/www/feed-generator/generate-feed.php --output=/var/www/feed/arukereso-feed-soudal-mapei.xml >> /var/log/arukereso-xml-feed.log 2>&1
 ```
 
 A `>> … 2>&1` a STDOUT (INFO) és STDERR (ERROR) sorokat is a logba írja.
-A script nem-nulla kilépési kóddal jelez hibát, és ilyenkor a régi XML-t
-nem írja felül.
+A script nem-nulla kilépési kóddal jelez hibát, és ilyenkor a régi XML-t nem írja felül.
 
-## 4. (Opcionális) logrotate a feed loghoz
+## 4. (Opcionális) logrotate
 
-`/etc/logrotate.d/nett-arukereso-xml-feed`:
+`/etc/logrotate.d/arukereso-xml-feed`:
 
 ```
-/var/log/nett-arukereso-xml-feed.log {
+/var/log/arukereso-xml-feed.log {
     weekly
     rotate 8
     compress

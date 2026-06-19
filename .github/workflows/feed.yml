@@ -31,6 +31,10 @@ jobs:
           extensions: curl, xmlwriter
 
       - name: Feed generálása
+        env:
+          # A forrás feed URL-je titokként (Settings -> Secrets and variables ->
+          # Actions -> New repository secret -> név: FEED_SOURCE_URL).
+          FEED_SOURCE_URL: ${{ secrets.FEED_SOURCE_URL }}
         run: |
           mkdir -p public
           php generate-feed.php --output=public/arukereso-feed-soudal-mapei.xml

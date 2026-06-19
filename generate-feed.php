@@ -4,16 +4,20 @@ declare(strict_types=1);
 /**
  * generate-feed.php
  * -----------------
- * A nett.hu Árukereső CSV feedből külön XML feedet készít, amely CSAK a
+ * Egy Árukereső CSV feedből külön XML feedet készít, amely CSAK a
  * Mapei és Soudal termékeket tartalmazza.
  *
  * Függőségek: TISZTA PHP CLI. Nincs Composer / külső csomag.
  *   Ajánlott kiterjesztések (PHP alaphoz tartoznak): ext-xmlwriter, ext-curl
  *   (a curl opcionális: ha nincs, file_get_contents() veszi át).
  *
+ * A forrás URL NINCS a kódban: a FEED_SOURCE_URL környezeti változóból
+ * (CI-ben titokból/secret-ből) vagy a --url kapcsolóból jön.
+ *
  * Használat:
- *   Éles (URL-ről tölt, alap kimenet a VPS publikus mappába):
- *     php generate-feed.php
+ *   Éles (a forrás URL a FEED_SOURCE_URL env-ből vagy --url-ből):
+ *     FEED_SOURCE_URL="https://..." php generate-feed.php
+ *     php generate-feed.php --url="https://..."
  *
  *   Helyi teszt (saját forrás és kimenet):
  *     php generate-feed.php --source=examples/ArukeresoFeed_sample.csv \
@@ -28,12 +32,11 @@ declare(strict_types=1);
 // ---------------------------------------------------------------------------
 // Konfiguráció (alapértékek; CLI kapcsolókkal felülírhatók)
 // ---------------------------------------------------------------------------
-const DEFAULT_FEED_URL   = 'https://nett.hu/arukereso-feed';
 const DEFAULT_OUTPUT_FILE = '/var/www/html/arukereso-feed-soudal-mapei.xml';
 const FIXED_DELIVERY_COST = '1890 Ft';
 const OUTPUT_CURRENCY      = 'HUF';
 const HTTP_TIMEOUT_SECONDS = 60;
-const USER_AGENT           = 'nett-arukereso-feed-generator/1.0 (+https://nett.hu)';
+const USER_AGENT           = 'arukereso-feed-generator/1.0';
 
 // A forrás CSV oszlopsorrendje (fix séma, 19 mező; ; elválasztással).
 const CSV_COLUMNS = [
@@ -61,12 +64,13 @@ function main(array $argv): int
         return 0;
     }
 
-    $source = $opts['source'] ?? null;                    // helyi fájl VAGY URL
-    $url    = $opts['url']    ?? DEFAULT_FEED_URL;        // éles forrás URL
+    $source = $opts['source'] ?? null;                          // helyi fájl VAGY URL
+    // Forrás URL: --url kapcsoló VAGY FEED_SOURCE_URL env (CI-ben secret-ből).
+    $url    = $opts['url'] ?? (getenv('FEED_SOURCE_URL') ?: '');
     $output = $opts['output'] ?? DEFAULT_OUTPUT_FILE;
 
     log_info(str_repeat('-', 60));
-    log_info('nett.hu Árukereső -> Mapei/Soudal XML feed generálás indul');
+    log_info('Árukereső -> Mapei/Soudal XML feed generálás indul');
 
     // 1) Forrás CSV beolvasása ------------------------------------------------
     try {
@@ -76,12 +80,16 @@ function main(array $argv): int
                 log_info("Forrás (helyi fájl): {$source}");
                 $csv = read_local_file($source);
             } else {
-                log_info("Forrás (URL): {$source}");
+                log_info('Forrás: URL (--source)');
                 $csv = download_feed($source);
             }
-        } else {
-            log_info("Forrás (éles URL): {$url}");
+        } elseif ($url !== '') {
+            log_info('Forrás: URL (FEED_SOURCE_URL / --url)');
             $csv = download_feed($url);
+        } else {
+            log_error('Nincs forrás megadva. Adj meg --source=<fájl|URL>, --url=<URL> '
+                . 'kapcsolót, vagy a FEED_SOURCE_URL környezeti változót.');
+            return 1;
         }
     } catch (Throwable $e) {
         log_error('A forrás feed beolvasása/letöltése sikertelen: ' . $e->getMessage());
@@ -409,7 +417,7 @@ function extract_attributes_from_name(string $name): array
 
 /**
  * Üres kategória esetén a terméknévből következtet kategóriára.
- * A szabályok a nett.hu feed tényleges taxonómiájára épülnek, specifikus ->
+ * A szabályok a forrásfeed tényleges taxonómiájára épülnek, specifikus ->
  * általános sorrendben (az első találat nyer). Ha egyik kulcsszó sem illik,
  * gyártó-szintű, felső kategóriával tér vissza, hogy ne maradjon üres.
  *
@@ -570,7 +578,7 @@ function write_xml_atomic(string $outputPath, array $products): void
     $writer->setIndent(true);
     $writer->setIndentString('  ');
     $writer->startDocument('1.0', 'UTF-8');
-    $writer->writeComment(' Generálva: ' . date('c') . ' | Forrás: nett.hu Árukereső feed | Szűrés: Mapei, Soudal ');
+    $writer->writeComment(' Generálva: ' . date('c') . ' | Szűrés: Mapei, Soudal ');
     $writer->startElement('products');
 
     foreach ($products as $p) {
@@ -637,21 +645,24 @@ function log_error(string $msg): void
 function print_usage(): void
 {
     $help = <<<TXT
-nett.hu Árukereső -> Mapei/Soudal XML feed generátor
+Árukereső -> Mapei/Soudal XML feed generátor
 
 Használat:
   php generate-feed.php [--source=<fájl|URL>] [--url=<URL>] [--output=<fájl>]
 
+A forrás URL a FEED_SOURCE_URL környezeti változóból (CI-ben secret-ből) vagy
+a --url kapcsolóból jön; a kódban nincs bedrótozva.
+
 Kapcsolók:
   --source=<fájl|URL>  Forrás CSV. Lehet helyi fájl vagy URL (helyi teszthez).
-                       Ha nincs megadva, a --url (alap: nett.hu) URL-ről tölt.
-  --url=<URL>          Éles forrás URL (alap: https://nett.hu/arukereso-feed).
+  --url=<URL>          Éles forrás URL (felülírja a FEED_SOURCE_URL env-et).
   --output=<fájl>      Kimeneti XML útvonal
                        (alap: /var/www/html/arukereso-feed-soudal-mapei.xml).
   --help               Ez a súgó.
 
 Példák:
-  php generate-feed.php
+  FEED_SOURCE_URL="https://..." php generate-feed.php
+  php generate-feed.php --url="https://..."
   php generate-feed.php --source=examples/ArukeresoFeed_sample.csv \
                         --output=output/arukereso-feed-soudal-mapei.xml
 
