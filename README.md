@@ -52,6 +52,8 @@ php generate-feed.php --help
 
 ## Kimeneti XML szerkezet
 
+A szerkezet az Árukereső hivatalos mintáját követi (lásd `feed_minta_HU.xml`):
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <products>
@@ -60,8 +62,8 @@ php generate-feed.php --help
     <manufacturer>Mapei|Soudal</manufacturer>
     <name>…</name>
     <product_url>…</product_url>
-    <price>…</price>
-    <net_price>…</net_price>
+    <price>4600,00</price>          <!-- 2 tizedes, vesszővel -->
+    <net_price>3622,00</net_price>
     <currency>HUF</currency>
     <image_url>…</image_url>
     <category>…</category>
@@ -69,11 +71,28 @@ php generate-feed.php --help
     <Delivery_Time>…</Delivery_Time>
     <Delivery_Cost>1890 Ft</Delivery_Cost>
     <EAN_code>…</EAN_code>
+    <color>szürke</color>          <!-- ha a névből kinyerhető (opcionális) -->
     <basket_disabled>0|1</basket_disabled>
+    <Attributes>                   <!-- ha a névből kinyerhető (opcionális) -->
+      <Attribute>
+        <Attribute_name>Kiszerelés</Attribute_name>
+        <Attribute_value>25 KG</Attribute_value>
+      </Attribute>
+    </Attributes>
   </product>
   …
 </products>
 ```
+
+### Ár-formátum és névből kinyert adatok
+
+- **Ár:** a `price` és `net_price` 2 tizedesre, **vesszős** tizedeselválasztóval, ezres
+  elválasztó nélkül (Árukereső formátum: `315,00`). Lásd `format_price()`.
+- **`<color>`:** a script a terméknévből kinyeri a színt, ha egyértelmű színszó szerepel
+  benne (konzervatív, szóhatáros illesztés). Lásd `extract_color_from_name()`.
+- **`<Attributes>` / Kiszerelés:** a névből kiszedi a kiszerelést (pl. `25 KG`, `310 ML`,
+  `70 MM × 30 M`, `200 DB/CSOMAG`) az Árukereső `Attribute_name`/`Attribute_value`
+  szerkezetben. Lásd `extract_attributes_from_name()`.
 
 ## Kilépési kódok
 

@@ -99,6 +99,8 @@ function main(array $argv): int
     $totalRows      = $result['totalRows'];
     $backfilled     = $result['backfilled'];
     $categoryFilled = $result['categoryFilled'];
+    $colorFilled    = $result['colorFilled'];
+    $attrFilled     = $result['attrFilled'];
     $malformedRows  = $result['malformedRows'];
 
     log_info("Összes adat sor (fejléc nélkül): {$totalRows}");
@@ -106,6 +108,8 @@ function main(array $argv): int
     log_info('Megtartott Mapei/Soudal termékek: ' . count($products));
     log_info("Pótolt (terméknév alapján kiegészített) gyártók: {$backfilled}");
     log_info("Pótolt kategóriák (névből következtetve): {$categoryFilled}");
+    log_info("Névből kinyert szín (<color>): {$colorFilled}");
+    log_info("Névből kinyert kiszerelés (<Attributes>): {$attrFilled}");
 
     // 3) Védelem: 0 termék esetén NE írjuk felül a régi XML-t -----------------
     if (count($products) === 0) {
@@ -233,6 +237,8 @@ function build_products(string $csv): array
     $totalRows     = 0;
     $backfilled    = 0;
     $categoryFilled = 0;
+    $colorFilled   = 0;
+    $attrFilled    = 0;
     $malformedRows = 0;
 
     $headerSeen = false;
@@ -286,15 +292,21 @@ function build_products(string $csv): array
             }
         }
 
-        // Kimeneti rekord összeállítása. Az értékeket NEM módosítjuk
-        // (URL/képnév/terméknév változatlan); az escaping az XML kiírásnál történik.
+        // Terméknévből kinyert extra adatok (Árukereső hivatalos mezői/attribútumai).
+        $color      = extract_color_from_name($row['Name']);          // <color> mező
+        $attributes = extract_attributes_from_name($row['Name']);     // <Attributes> blokk (pl. Kiszerelés)
+        if ($color !== null)        $colorFilled++;
+        if ($attributes !== [])     $attrFilled++;
+
+        // Kimeneti rekord. Az ár 2 tizedesre, vesszővel (Árukereső formátum: 315,00).
+        // URL/képnév/terméknév változatlan; az escaping az XML kiírásnál történik.
         $products[] = [
             'identifier'      => $row['Identifier'],
             'manufacturer'    => $canonical,
             'name'            => $row['Name'],
             'product_url'     => $row['ProductUrl'],
-            'price'           => $row['Price'],
-            'net_price'       => $row['NetPrice'],
+            'price'           => format_price($row['Price']),
+            'net_price'       => format_price($row['NetPrice']),
             'currency'        => OUTPUT_CURRENCY,
             'image_url'       => $row['ImageUrl'],
             'category'        => $category,
@@ -302,7 +314,9 @@ function build_products(string $csv): array
             'Delivery_Time'   => $row['DeliveryTime'],
             'Delivery_Cost'   => FIXED_DELIVERY_COST,
             'EAN_code'        => $row['EanCode'],
+            'color'           => $color,        // null, ha nem találtunk
             'basket_disabled' => $row['BasketDisabled'],
+            '_attributes'     => $attributes,   // [[név, érték], ...]
         ];
     }
 
@@ -311,8 +325,86 @@ function build_products(string $csv): array
         'totalRows'      => $totalRows,
         'backfilled'     => $backfilled,
         'categoryFilled' => $categoryFilled,
+        'colorFilled'    => $colorFilled,
+        'attrFilled'     => $attrFilled,
         'malformedRows'  => $malformedRows,
     ];
+}
+
+/**
+ * Árat Árukereső-formátumra hoz: 2 tizedesjegy, VESSZŐS tizedeselválasztó,
+ * ezres elválasztó nélkül (a hivatalos feed_minta_HU.xml szerint: 315,00).
+ * Üres/0 bemenetnél üres stringet ad vissza (nem írunk hibás 0,00-t).
+ */
+function format_price(string $raw): string
+{
+    $raw = trim($raw);
+    if ($raw === '') {
+        return '';
+    }
+    // A forrás egész HUF (pl. "4600"); vessző/szóköz biztonsági normalizálás.
+    $normalized = str_replace([' ', ','], ['', '.'], $raw);
+    if (!is_numeric($normalized)) {
+        return $raw; // nem szám: hagyjuk érintetlenül (nem módosítunk)
+    }
+    return number_format((float) $normalized, 2, ',', '');
+}
+
+/**
+ * A terméknévből kinyeri a színt, ha egyértelmű színszó szerepel benne.
+ * Konzervatív: csak ismert színszavakat fogad el, szóhatárral, hogy ne legyen
+ * téves találat. Visszaadja a (kisbetűs) színt, vagy null-t.
+ */
+function extract_color_from_name(string $name): ?string
+{
+    // Ismert magyar színek (köztük gyakori összetettek). Szóhatárral illesztünk.
+    $colors = [
+        'átlátszó', 'áttetsző', 'színtelen', 'transzparens',
+        'jegesszürke', 'középszürke', 'világosszürke', 'sötétszürke', 'holdfehér',
+        'törtfehér', 'krémfehér', 'antracit', 'grafit',
+        'fehér', 'fekete', 'szürke', 'bézs', 'barna', 'drapp',
+        'piros', 'vörös', 'kék', 'zöld', 'sárga', 'narancssárga', 'narancs',
+        'lila', 'rózsaszín', 'arany', 'ezüst', 'bordó', 'türkiz', 'krém',
+    ];
+    foreach ($colors as $c) {
+        if (preg_match('/(?<![\p{L}])' . preg_quote($c, '/') . '(?![\p{L}])/iu', $name)) {
+            return $c;
+        }
+    }
+    return null;
+}
+
+/**
+ * A terméknévből kinyer extra attribútumokat (jelenleg: Kiszerelés).
+ * A kiszerelés egy mennyiség+mértékegység (pl. "25 KG", "310 ML", "0,25 L",
+ * "70 MM × 30 M", "200 DB/CSOMAG"). Az UTOLSÓ ilyen találatot vesszük, mert a
+ * kiszerelés jellemzően a név végén áll (a cikkszám előtt).
+ *
+ * @return array<int,array{0:string,1:string}>  [[attr_név, attr_érték], ...]
+ */
+function extract_attributes_from_name(string $name): array
+{
+    $attrs = [];
+
+    // Mértékegység (m2/m² a sima "m" ELŐTT, hogy ne rövidüljön le).
+    $unit = '(?:kg|g|ml|l|m2|m²|cm|mm|m|db(?:\s*\/\s*csomag)?)';
+    $num  = '\d+(?:[.,]\d+)?';
+    // Három forma, leghosszabbtól a legrövidebbig (az alternáció sorrendje számít):
+    //  a) "70 mm × 30 m"  – mindkét számhoz tartozik mértékegység
+    //  b) "120 × 250 mm"  – csak a végén van mértékegység
+    //  c) "25 kg"         – egyszerű mennyiség
+    $dimA   = $num . '\s*' . $unit . '\s*×\s*' . $num . '\s*' . $unit;
+    $dimB   = $num . '\s*×\s*' . $num . '\s*' . $unit;
+    $simple = $num . '\s*' . $unit;
+    $pattern = '/\b(?:' . $dimA . '|' . $dimB . '|' . $simple . ')/iu';
+
+    // Az UTOLSÓ találatot vesszük: a kiszerelés jellemzően a név végén (a cikkszám előtt) áll.
+    if (preg_match_all($pattern, $name, $m) && !empty($m[0])) {
+        $pack = preg_replace('/\s+/', ' ', trim(end($m[0])));
+        $attrs[] = ['Kiszerelés', $pack];
+    }
+
+    return $attrs;
 }
 
 /**
@@ -482,11 +574,34 @@ function write_xml_atomic(string $outputPath, array $products): void
     $writer->startElement('products');
 
     foreach ($products as $p) {
+        // Az attribútum-blokkot külön kezeljük; a 'color' opcionális (üresen kihagyjuk).
+        $attributes = $p['_attributes'] ?? [];
+        unset($p['_attributes']);
+
         $writer->startElement('product');
         foreach ($p as $tag => $value) {
+            // Opcionális mezőket (null/üres color) nem írunk ki.
+            if ($value === null || $value === '') {
+                if ($tag === 'color') {
+                    continue;
+                }
+            }
             // writeElement gondoskodik a helyes XML-escapelésről.
-            $writer->writeElement($tag, $value);
+            $writer->writeElement($tag, (string) $value);
         }
+
+        // <Attributes> blokk (Árukereső hivatalos szerkezet), ha van mit.
+        if ($attributes !== []) {
+            $writer->startElement('Attributes');
+            foreach ($attributes as [$attrName, $attrValue]) {
+                $writer->startElement('Attribute');
+                $writer->writeElement('Attribute_name', $attrName);
+                $writer->writeElement('Attribute_value', $attrValue);
+                $writer->endElement(); // Attribute
+            }
+            $writer->endElement(); // Attributes
+        }
+
         $writer->endElement(); // product
     }
 

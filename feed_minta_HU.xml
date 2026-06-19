@@ -1,0 +1,86 @@
+<products>
+<product>
+<identifier>00010</identifier>
+<manufacturer>Samsung</manufacturer>
+<name>Gear IconX SM-R150</name>
+<product_url>http://www.onoldala.hu/products/00010/sm-r150.html</product_url>
+<price>379,97</price>
+<net_price>299,18</net_price>
+<currency>HUF</currency>
+<image_url>http://www.onoldala.hu/images/smr150.jpg</image_url>
+<category>Műszaki cikk - Fülhallgató</category>
+<description>Kapcsolj környezeti hang üzemmódra, hogy halld a körülötted lévő hangokat is. Így kedvenc zenéid hallgatása mellett is végig a jelenben érezheted magad...</description>
+<Delivery_Time>1 munkanap</Delivery_Time>
+<Delivery_Cost>990 Ft</Delivery_Cost>
+<EAN_code>8806088369228</EAN_code>
+<color>fehér</color>
+<size>42</size>
+<warranty>24</warranty>
+<basket_disabled>0</basket_disabled>
+<FreeDelivery>0</FreeDelivery>
+<Oversize>0</Oversize>
+<PPPMaxQuantity>1</PPPMaxQuantity>
+<ProductWeight>1000 g</ProductWeight>
+<Attributes>
+
+            <Attribute>
+
+                        <Attribute_name>Típus</Attribute_name>
+
+                        <Attribute_value>Fejhallgató</Attribute_value>
+
+            </Attribute>
+
+            <Attribute>
+
+                        <Attribute_name>Vezeték nélküli</Attribute_name>
+
+                        <Attribute_value>Igen</Attribute_value>
+
+            </Attribute>
+
+</Attributes>
+</product>
+<product>
+<identifier>00011</identifier>
+<manufacturer>Apple</manufacturer>
+<name>Magic mouse MB829ZM</name>
+<product_url>http://www.onoldala.hu/products/00011/magic-mouse.html</product_url>
+<price>315,00</price>
+<net_price>248,03</net_price>
+<currency>HUF</currency>
+<image_urle>http://www.onoldala.hu/images/magic-mouse.jpg</image_urle>
+<category>Számítástechnika - Egér</category>
+<description>Apple Magic Mouse Multi-Touch technológiával működik...</description>
+<Delivery_Time>7 munkanap</Delivery_Time>
+<Delivery_Cost>FREE</Delivery_Cost>
+<EAN_code>0885909934140</EAN_code>
+<color>fekete</color>
+<size>XL</size>
+<warranty>24</warranty>
+<basket_disabled>1</basket_disabled>
+<FreeDelivery>1</FreeDelivery>
+<Oversize>1</Oversize>
+<PPPMaxQuantity>1</PPPMaxQuantity>
+<ProductWeight>2 kg</ProductWeight>
+</product>
+<Attributes>
+
+            <Attribute>
+
+                        <Attribute_name>Típus</Attribute_name>
+
+                        <Attribute_value>egér</Attribute_value>
+
+            </Attribute>
+
+            <Attribute>
+
+                        <Attribute_name>Vezeték nélküli</Attribute_name>
+
+                        <Attribute_value>Igen</Attribute_value>
+
+            </Attribute>
+
+</Attributes>
+</products>
