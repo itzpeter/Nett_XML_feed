@@ -19,8 +19,8 @@ declare(strict_types=1);
  *     FEED_SOURCE_URL="https://..." php generate-feed.php
  *     php generate-feed.php --url="https://..."
  *
- *   Helyi teszt (saját forrás és kimenet):
- *     php generate-feed.php --source=examples/ArukeresoFeed_sample.csv \
+ *   Helyi teszt (saját forrás CSV és kimenet):
+ *     php generate-feed.php --source=sajat-feed.csv \
  *                           --output=output/arukereso-feed-soudal-mapei.xml
  *
  *   Súgó:
@@ -663,7 +663,7 @@ Kapcsolók:
 Példák:
   FEED_SOURCE_URL="https://..." php generate-feed.php
   php generate-feed.php --url="https://..."
-  php generate-feed.php --source=examples/ArukeresoFeed_sample.csv \
+  php generate-feed.php --source=sajat-feed.csv \
                         --output=output/arukereso-feed-soudal-mapei.xml
 
 TXT;

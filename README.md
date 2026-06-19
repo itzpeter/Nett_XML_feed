@@ -23,11 +23,11 @@ FEED_SOURCE_URL="https://<forrás-feed-url>" php generate-feed.php --output=feed
 php generate-feed.php --url="https://<forrás-feed-url>" --output=feed.xml
 ```
 
-Helyi teszt mintafájllal (nincs hálózat):
+Helyi teszt saját CSV fájllal (nincs hálózat):
 
 ```bash
 php generate-feed.php \
-  --source=examples/ArukeresoFeed_sample.csv \
+  --source=sajat-feed.csv \
   --output=output/arukereso-feed-soudal-mapei.xml
 ```
 
