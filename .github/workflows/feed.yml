@@ -3,7 +3,7 @@ name: Árukereső Mapei/Soudal feed
 # Mikor fusson:
 on:
   schedule:
-    - cron: '10 3 * * *'   # minden nap 03:10 UTC (= 05:10 nyári / 04:10 téli idő itthon)
+    - cron: '37 2 * * *'   # minden nap 02:37 UTC (= 04:37 nyári / 03:37 téli idő itthon); nem kerek időpont, így kevésbé torlódik
   workflow_dispatch: {}     # kézi indítás is a GitHub felületéről
 
 # A GitHub Pages deploy-hoz szükséges jogosultságok
